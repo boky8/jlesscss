@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class RhinoCompiler extends Compiler {
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RhinoCompiler.class);
+	private static final org.slf4j.Logger log_js = org.slf4j.LoggerFactory.getLogger(RhinoCompiler.class.getName() + ".js");
 
 	private final Scriptable scope;
 	private final ContextFactory contextFactory;
@@ -31,6 +32,8 @@ public class RhinoCompiler extends Compiler {
 			Global global = new Global();
 			global.init(context);
 			scope = context.initStandardObjects(global);
+			ScriptableObject.putProperty(scope, "log", Context.javaToJS(log_js, scope));
+			// scope.put("log", scope, Context.toObject(log, scope));
 
 			ClassLoader[] classLoaders = new ClassLoader[] {
 					Thread.currentThread().getContextClassLoader(),
@@ -38,18 +41,7 @@ public class RhinoCompiler extends Compiler {
 			};
 			// Files need to bi split otherwise you're going to hit the Rhino/JVM 64k limit
 			for (String s : new String[]{
-					"com/cekrlic/jlesscss/env.js/platform/core.js",
-					"com/cekrlic/jlesscss/env.js/platform/rhino.js",
-					"com/cekrlic/jlesscss/env.js/console.js",
-					"com/cekrlic/jlesscss/env.js/dom.js",
-					"com/cekrlic/jlesscss/env.js/event.js",
-					"com/cekrlic/jlesscss/env.js/html.js",
-					"com/cekrlic/jlesscss/env.js/css.js",
-					"com/cekrlic/jlesscss/env.js/parser.js",
-					"com/cekrlic/jlesscss/env.js/xhr.js",
-					"com/cekrlic/jlesscss/env.js/timer.js",
-					"com/cekrlic/jlesscss/env.js/window.js",
-					"com/cekrlic/jlesscss/less.js",
+					"com/cekrlic/jlesscss/less-rhino.js",
 					"com/cekrlic/jlesscss/process-less.js"
 			}) {
 				java.io.InputStream is = null;
@@ -105,7 +97,7 @@ public class RhinoCompiler extends Compiler {
 			if(!callback.isComplete()) {
 				log.info("Waiting for less to finish processing for {}", source.getFileName());
 				synchronized (callback) {
-					callback.wait(60000);
+					callback.wait(15000);
 				}
 			}
 

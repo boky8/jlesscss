@@ -32,18 +32,7 @@ public class V8Compiler extends Compiler {
 		try {
 			ClassLoader classLoader = this.getClass().getClassLoader();
 			for (String s : new String[]{
-					"com/cekrlic/jlesscss/env.js/platform/core.js",
-					"com/cekrlic/jlesscss/env.js/platform/rhino.js",
-					"com/cekrlic/jlesscss/env.js/console.js",
-					"com/cekrlic/jlesscss/env.js/dom.js",
-					"com/cekrlic/jlesscss/env.js/event.js",
-					"com/cekrlic/jlesscss/env.js/html.js",
-					"com/cekrlic/jlesscss/env.js/css.js",
-					"com/cekrlic/jlesscss/env.js/parser.js",
-					"com/cekrlic/jlesscss/env.js/xhr.js",
-					"com/cekrlic/jlesscss/env.js/timer.js",
-					"com/cekrlic/jlesscss/env.js/window.js",
-					"com/cekrlic/jlesscss/less.js",
+					"com/cekrlic/jlesscss/less-rhino.js",
 					"com/cekrlic/jlesscss/process-less.js"
 			}) {
 				try (Reader r = new InputStreamReader(classLoader.getResourceAsStream(s), "UTF-8")) {

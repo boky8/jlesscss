@@ -42,8 +42,8 @@ For this, please use the maven plugin found here: https://github.com/marceloverd
 Requirements
 ============
 
-Java 7
-A Servlet 3.0 compliant servlet container
+* Java 7
+* A Servlet 3.0 compliant servlet container
 
 
 
@@ -51,5 +51,6 @@ Related projects
 ================
 
 
-Worth checking out is also https://github.com/marceloverdijk/lesscss-java which seems to be regularly updated
-but focuses on core compilation only. They are also using lessjs-rhino.js as oposed to classical less.js.
+* Worth checking out is also https://github.com/marceloverdijk/lesscss-java
+* Official org.less compiler, but the compiler will always create a temporary file and is not suitable for
+  our use case of loading files through HTTP Servlet methods.
