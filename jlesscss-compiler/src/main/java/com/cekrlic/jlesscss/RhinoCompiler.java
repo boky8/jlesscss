@@ -32,7 +32,10 @@ public class RhinoCompiler extends Compiler {
 			global.init(context);
 			scope = context.initStandardObjects(global);
 
-			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+			ClassLoader[] classLoaders = new ClassLoader[] {
+					Thread.currentThread().getContextClassLoader(),
+					this.getClass().getClassLoader()
+			};
 			// Files need to bi split otherwise you're going to hit the Rhino/JVM 64k limit
 			for (String s : new String[]{
 					"com/cekrlic/jlesscss/env.js/platform/core.js",
@@ -49,7 +52,17 @@ public class RhinoCompiler extends Compiler {
 					"com/cekrlic/jlesscss/less.js",
 					"com/cekrlic/jlesscss/process-less.js"
 			}) {
-				try (Reader r = new InputStreamReader(classLoader.getResourceAsStream(s), "UTF-8")) {
+				java.io.InputStream is = null;
+				for(ClassLoader cl: classLoaders) {
+					is = cl.getResourceAsStream(s);
+					if(is != null) { break; }
+				}
+
+				if(is == null) {
+					throw new LessCSSException("Could not load file " + s + "!");
+				}
+
+				try (Reader r = new InputStreamReader(is, "UTF-8")) {
 					log.info("Compiling {}", getName(s));
 					Script script = context.compileReader(r, getName(s), 1, null);
 					script.exec(context, scope);
