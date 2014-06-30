@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -51,6 +52,7 @@ public class LessCSSFilter implements Filter {
 			"EEE, dd-MMM-yy HH:mm:ss zzz", // PATTERN_RFC1036
 			"EEE MMM d HH:mm:ss yyyy", // PATTERN_ASCTIME
 	};
+	static final String COOKIE_NAME = "i";
 
 	private Compiler compiler;
 
@@ -74,6 +76,7 @@ public class LessCSSFilter implements Filter {
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
 
+		res.setCharacterEncoding("UTF-8");
 		res.setContentType("text/css; charset=UTF-8");
 
 		HttpServletRequest request = (HttpServletRequest) req;
@@ -85,18 +88,26 @@ public class LessCSSFilter implements Filter {
 		}
 
 		// Capture the resource file
-		ResourceResponseWrapper resourceresponsewrapper = new ResourceResponseWrapper(response);
-		chain.doFilter(request, resourceresponsewrapper);
+		ResourceResponseWrapper wrapper = new ResourceResponseWrapper(response);
+		chain.doFilter(request, wrapper);
 
-		if(response.getContentType().startsWith("application/")) {
-			res.setContentType("text/css; charset=UTF-8");
+		String ct = response.getContentType().toLowerCase().trim();
+
+		if(!ct.startsWith("text/css") && !ct.startsWith("text/less")) {
+			if(ct.startsWith("application/octet-stream")) {
+				log.debug("File types not defined for *.less, returning application/octet-stream, but expected text/less. Please configure your app server.");
+				res.setContentType("text/css; charset=UTF-8");
+			} else {
+				res.getOutputStream().write(wrapper.toByteArray());
+			}
 		}
 
 		// Stop processing if not all good
-		if (resourceresponsewrapper.getStatus() != HttpServletResponse.SC_OK) {
+		if (wrapper.getStatus() != HttpServletResponse.SC_OK) {
 			return;
 		}
 
+		res.setCharacterEncoding("UTF-8");
 		log.info("Processing request for: {}", request.getServletPath());
 
 		long lastModified;
@@ -109,7 +120,7 @@ public class LessCSSFilter implements Filter {
 		if (ifModifiedSince > 0) {
 			Cookie includes = null;
 			for(Cookie c: request.getCookies()) {
-				if("Includes".equalsIgnoreCase(c.getName())) {
+				if(COOKIE_NAME.equalsIgnoreCase(c.getName())) {
 					includes = c;
 					break;
 				}
@@ -117,7 +128,7 @@ public class LessCSSFilter implements Filter {
 
 			if(includes != null) {
 				// Check included files
-				for(String path: includes.getValue().split(",")) {
+				for(String path: decrypt(includes.getValue()).split(",")) {
 					log.info("Checking last modified for: {}", path);
 					LastModifiedResponseWrapper lmrw = new LastModifiedResponseWrapper(response);
 					RequestDispatcher rd = request.getRequestDispatcher(path);
@@ -149,20 +160,36 @@ public class LessCSSFilter implements Filter {
 		List<String> files = new ArrayList<>(16);
 		HtmlImporter importer = new HtmlImporter(request, response);
 		importer.setFileImportedCallback(new Importer.ListFileImporterCallback(files));
-		Source source = new MemorySource(request.getServletPath(), resourceresponsewrapper.toString());
+		Source source = new MemorySource(request.getServletPath(), wrapper.toString());
 
 		String result = compiler.compile(source, importer);
 
 		// Write processed result to response
-		final byte[] outbytes = result.getBytes(resourceresponsewrapper.getCharacterEncoding());
+		final byte[] outbytes = result.getBytes(wrapper.getCharacterEncoding());
 
-		Cookie c = new Cookie("Includes", join(files, ","));
+		Cookie c = new Cookie(COOKIE_NAME, encrypt(join(files, ",")));
 		c.setHttpOnly(true);
 		c.setPath(request.getRequestURI());
 		c.setMaxAge(24 * 3600 * 365);
 		response.addCookie(c);
 		response.setContentLength(outbytes.length);
 		response.getOutputStream().write(outbytes);
+	}
+
+	private String encrypt(String join) {
+		try {
+			return javax.xml.bind.DatatypeConverter.printBase64Binary(join.getBytes("UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			return javax.xml.bind.DatatypeConverter.printBase64Binary(join.getBytes());
+		}
+	}
+
+	private String decrypt(String value) {
+		try {
+			return new String(javax.xml.bind.DatatypeConverter.parseBase64Binary(value), "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			return new String(javax.xml.bind.DatatypeConverter.parseBase64Binary(value));
+		}
 	}
 
 	private String join(List<String> files, String separator) {
