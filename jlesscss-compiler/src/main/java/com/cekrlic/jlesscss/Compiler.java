@@ -14,10 +14,16 @@
 
 package com.cekrlic.jlesscss;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * Compiles LESS input into CSS, using less.js on Mozilla Rhino.
  */
 public abstract class Compiler {
+
 	/**
 	 * Create a new LESS compiler.
 	 *
@@ -26,7 +32,25 @@ public abstract class Compiler {
 	protected Compiler() throws LessCSSException {
 	}
 
-	protected abstract String compile(Source source, Importer importer) throws LessCSSException;
+	/**
+	 * Compile stuff.
+	 * @param source The LESS source; imported is deducted from the source.
+	 * @return The compiled CSS.
+	 * @throws LessCSSException
+	 */
+	public String compile(Source source) throws LessCSSException {
+		return compile(source, source.getImporter());
+	}
+
+	/**
+	 * Compile stuff.
+	 * @param source The LESS source; imported is deducted from the source.
+	 * @param importer The importer class which is called when coming across <tt>@import</tt> statements. May be <tt>null</tt>
+	 *   if you don't expect to see such statements.
+	 * @return The compiled CSS.
+	 * @throws LessCSSException
+	 */
+	public abstract String compile(Source source, Importer importer) throws LessCSSException;
 
 
 	protected String getName(String s) {
@@ -35,8 +59,58 @@ public abstract class Compiler {
 
 
 	public static Compiler getCompiler() throws LessCSSException {
-		// TODO: Check if V8 compiler is available and use that one
+		/*
+
+		Until we get CompiledScripts to work properly, Rhino beats nashorn
+		ScriptEngineManager factory = new ScriptEngineManager();
+		ScriptEngine engine;
+
+		// See https://github.com/pose/jav8
+		engine = factory.getEngineByName("jav8");
+		if(engine != null) {
+			return new JavaXScriptCompiler(engine);
+		}
+
+		engine = factory.getEngineByName("nashorn");
+		if(engine != null) {
+			return new JavaXScriptCompiler(engine);
+		}
+		 */
+
+
 		return new RhinoCompiler();
+	}
+
+	/**
+	 * Callback is called directly from the script when parsing is complete.
+	 */
+	public static class Callback {
+		private static final Logger log = LoggerFactory.getLogger(Callback.class);
+		protected final String filename;
+		protected final AtomicBoolean complete = new AtomicBoolean(false);
+
+		public Callback(String filename) {
+			this.filename = filename;
+		}
+
+		public boolean isComplete() {
+			synchronized (complete) {
+				return complete.get();
+			}
+		}
+
+		protected void callback() {
+			synchronized (complete) {
+				complete.set(true);
+			}
+
+			log.debug("Parsing complete for {}", filename);
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+
 	}
 
 }

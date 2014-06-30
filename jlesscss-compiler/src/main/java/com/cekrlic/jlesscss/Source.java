@@ -17,4 +17,10 @@ public interface Source {
 	 */
 	public String getContent();
 
+	/**
+	 * Create an imported based on this source as a reference
+	 * @return The importer
+	 */
+	public Importer getImporter();
+
 }

@@ -44,3 +44,8 @@ var processLess = function(importer, name, content, callback, env) {
 		callback.callback(e, root, content);
 	});
 };
+
+// JAVAX SCRIPTING has a difficulty returning data from scripts
+var toCss = function(tree, result) {
+	result.result = tree.toCSS();
+};

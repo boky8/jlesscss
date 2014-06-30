@@ -96,6 +96,12 @@
 				<scope>test</scope>
 			</dependency>
 			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>jul-to-slf4j</artifactId>
+				<version>1.6.1</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
 				<groupId>org.mozilla</groupId>
 				<artifactId>rhino</artifactId>
 				<version>1.7R4</version>
@@ -160,7 +166,7 @@
 					<configuration>
 						<forkMode>once</forkMode>
 						<useManifestOnlyJar>false</useManifestOnlyJar>
-						<argLine>-enableassertions -Xmx512m -Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
+						<argLine>-enableassertions -Xmx512m</argLine>
 						<testFailureIgnore>true</testFailureIgnore>
 						<parallel>classes</parallel>
 						<threadCount>10</threadCount>
@@ -176,7 +182,7 @@
 					<artifactId>maven-failsafe-plugin</artifactId>
 					<version>2.16</version>
 					<configuration>
-						<argLine>-enableassertions -Xmx512m -Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
+						<argLine>-enableassertions -Xmx512m</argLine>
 						<testFailureIgnore>true</testFailureIgnore>
 						<encoding>UTF-8</encoding>
 						<parallel>classes</parallel>

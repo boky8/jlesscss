@@ -20,6 +20,7 @@ What's wrong with the [official LESS compiler](https://github.com/marceloverdijk
 * it reads files from disk and does not use HTTP servlet API (hence, your *.less files must be static files and
   cannot be dynamically generated)
 * always creates temporary files when compiling
+* support for different scripting engines through `javax.scripting`: https://github.com/pose/jav8 and nashorn 
 
 
 Usage of the filter

@@ -11,6 +11,7 @@ import java.nio.file.Path;
  * @created 27.6.2014 12:11
  */
 public class FileSource implements Source {
+	private final Path path;
 	private final String content;
 	private final String fileName;
 
@@ -19,6 +20,7 @@ public class FileSource implements Source {
 	}
 
 	public FileSource(Path path) throws IOException {
+		this.path = path;
 		fileName = path.toFile().getName();
 		content = new String(Files.readAllBytes(path), "UTF-8");
 	}
@@ -32,5 +34,10 @@ public class FileSource implements Source {
 	@Override
 	public String getContent() {
 		return content;
+	}
+
+	@Override
+	public Importer getImporter() {
+		return new FileSystemImporter(path);
 	}
 }

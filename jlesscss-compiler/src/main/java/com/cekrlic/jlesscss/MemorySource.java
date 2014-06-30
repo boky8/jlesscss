@@ -25,4 +25,9 @@ public class MemorySource implements Source {
 	public String getContent() {
 		return content;
 	}
+
+	@Override
+	public Importer getImporter() {
+		return new NullImporter();
+	}
 }

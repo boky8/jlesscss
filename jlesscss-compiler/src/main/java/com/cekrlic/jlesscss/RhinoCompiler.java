@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author boky
@@ -74,7 +73,7 @@ public class RhinoCompiler extends Compiler {
 	 * @return Compiled LESS input.
 	 * @throws LessCSSException
 	 */
-	protected String compile(Source source, Importer importer) throws LessCSSException {
+	public String compile(Source source, Importer importer) throws LessCSSException {
 
 		try {
 			long start, end;
@@ -84,7 +83,7 @@ public class RhinoCompiler extends Compiler {
 
 			final Callback callback = new Callback(context, scope, source.getFileName());
 
-			log.info("Calling processLess for {}", source.getFileName());
+			// log.info("Calling processLess for {}", source.getFileName());
 			Function processLess = (Function) ScriptableObject.getProperty(scope, "processLess");
 			processLess.call(context, scope, scope, new Object[]{
 					Context.toObject(importer, scope),
@@ -95,7 +94,7 @@ public class RhinoCompiler extends Compiler {
 
 			start = System.nanoTime();
 			if(!callback.isComplete()) {
-				log.info("Waiting for less to finish processing for {}", source.getFileName());
+				log.debug("Waiting for less to finish processing for {}", source.getFileName());
 				synchronized (callback) {
 					callback.wait(15000);
 				}
@@ -117,45 +116,28 @@ public class RhinoCompiler extends Compiler {
 		}
 	}
 
-	public static class Callback {
+	public static class Callback extends Compiler.Callback {
 		private static final Logger log = LoggerFactory.getLogger(Callback.class);
 		private final Context context;
 		private final Scriptable scope;
-		private final String filename;
-		private final AtomicBoolean complete = new AtomicBoolean(false);
 
 		private ScriptableObject err = null;
 		private ScriptableObject tree = null;
 
 		public Callback(Context context, Scriptable scope, String filename) {
-			super();
+			super(filename);
 			this.context = context;
 			this.scope = scope;
-			this.filename = filename;
 		}
 
 		public void callback(ScriptableObject err, ScriptableObject tree) {
 			callback(err, tree, null);
 		}
 
-		public boolean isComplete() {
-			synchronized (complete) {
-				return complete.get();
-			}
-		}
-
 		public void callback(ScriptableObject err, ScriptableObject tree, String content) {
 			this.err = err;
 			this.tree = tree;
-
-			synchronized (complete) {
-				complete.set(true);
-			}
-
-			log.info("Parsing complete for {}", filename);
-			synchronized (this) {
-				this.notifyAll();
-			}
+			super.callback();
 		}
 
 		@Override
@@ -165,12 +147,12 @@ public class RhinoCompiler extends Compiler {
 			} else {
 				long start, end;
 
-				log.info("Converting to CSS... {}", filename);
+				log.debug("Converting to CSS... {}", filename);
 				Function f = (Function) tree.get("toCSS");
 				start = System.nanoTime();
 				Object result = f.call(context, scope, tree, new Object[]{});
 				end = System.nanoTime();
-				log.info("toCSS('{}'): {}s", filename, String.format("%.3f", (double) (end - start) / 1000000000.0d));
+				log.trace("toCSS('{}'): {}s", filename, String.format("%.3f", (double) (end - start) / 1000000000.0d));
 				return result.toString();
 			}
 		}

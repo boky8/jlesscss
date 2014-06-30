@@ -37,4 +37,5 @@ public interface Importer {
 	public void setFileImportedCallback(FileImportedCallback callback);
 
 	public Source importFile(String path) throws IOException;
+
 }
