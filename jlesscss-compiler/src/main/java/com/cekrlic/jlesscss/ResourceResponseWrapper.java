@@ -1,6 +1,4 @@
 /*
- * Copyright 2012, Emanuel Rabina (http://www.ultraq.net.nz/)
- * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -27,8 +25,6 @@ import java.io.*;
 
 /**
  * Response wrapper to capture resources.
- *
- * @author Emanuel Rabina
  */
 public class ResourceResponseWrapper extends HttpServletResponseWrapper {
 	private static final Logger log = LoggerFactory.getLogger(ResourceResponseWrapper.class);
