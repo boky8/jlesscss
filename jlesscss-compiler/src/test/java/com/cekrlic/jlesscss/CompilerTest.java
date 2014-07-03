@@ -1,5 +1,6 @@
 package com.cekrlic.jlesscss;
 
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -50,16 +51,28 @@ public class CompilerTest {
 	@DataProvider(name = "sources")
 	public Object[][] getSources() throws IOException {
 		return new Object[][]{
-				{new UriSource(cl.getResource("simple.less"))},
-				{new UriSource(cl.getResource("variables.less"))},
-				{new UriSource(cl.getResource("functions.less"))}
+				{new UriSource(cl.getResource("simple.less")), "body {\n" +
+						"  background: black;\n" +
+						"}"},
+				{new UriSource(cl.getResource("variables.less")), ""},
+				{new UriSource(cl.getResource("functions.less")), "body {\n" +
+						"  background: black;\n" +
+						"}\n" +
+						"html {\n" +
+						"  color: #42474f;\n" +
+						"}\n" +
+						"html body {\n" +
+						"  background: #1a7baa;\n" +
+						"}"}
 		};
 	}
 
 	@Test(dataProvider = "sources")
-	public void compileTest(Source source) {
+	public void compileTest(Source source, String expected) {
 		for (Compiler compiler : compilers) {
-			compiler.compile(source);
+			String compile = compiler.compile(source);
+			Assert.assertNotNull(compile, "Compiling " + source + " resulted in NULL; compiler = " + compiler);
+			Assert.assertEquals(compile.trim(), expected);
 		}
 
 

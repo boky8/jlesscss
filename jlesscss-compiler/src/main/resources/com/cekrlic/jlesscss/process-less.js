@@ -4,7 +4,7 @@ less.fileAsync = true;
 function Objectify(func) {
 	this.callback = function() {
 		func.apply(this, arguments);
-	}
+	};
 	return this;
 }
 

@@ -18,6 +18,7 @@ public class JavaXScriptCompiler extends Compiler {
 
 	final ScriptEngine engine;
 	final Invocable invocable;
+	private CompiledScript compiledScript;
 
 	protected JavaXScriptCompiler(ScriptEngine engine) throws LessCSSException {
 		super();
@@ -33,13 +34,13 @@ public class JavaXScriptCompiler extends Compiler {
 			ClassLoader classLoader = this.getClass().getClassLoader();
 
 
-			/*if (engine instanceof Compilable) {
+			if (engine instanceof Compilable) {
 				InputStream is = null;
 				try {
 					for (String s : new String[]{
 							"com/cekrlic/jlesscss/less-rhino.js",
 							"com/cekrlic/jlesscss/process-less.js",
-							"com/cekrlic/jlesscss/object.js"
+							"com/cekrlic/jlesscss/javax-compressor.js"
 					}) {
 						InputStream i2 = classLoader.getResourceAsStream(s);
 						log.info("Loading {}...", getName(s));
@@ -47,15 +48,15 @@ public class JavaXScriptCompiler extends Compiler {
 					}
 					Compilable compilable = (Compilable) engine;
 					log.info("Compiling...");
-					CompiledScript cs = compilable.compile(new InputStreamReader(is, "UTF-8"));
-					compiledScript = cs.eval();
-					invocable = (Invocable) cs.getEngine();
+					//noinspection ConstantConditions
+					compiledScript = compilable.compile(new InputStreamReader(is, "UTF-8"));
+					invocable = (Invocable) compiledScript.getEngine();
 				} finally {
 					if(is != null) {
 						is.close();
 					}
 				}
-			} else {*/
+			} else {
 				invocable = (Invocable) engine;
 				// compiledScript = null;
 				for (String s : new String[]{
@@ -67,7 +68,7 @@ public class JavaXScriptCompiler extends Compiler {
 						engine.eval(r);
 					}
 				}
-			/*}*/
+			}
 
 
 		} catch (ScriptException | IOException ex) {
@@ -79,12 +80,58 @@ public class JavaXScriptCompiler extends Compiler {
 
 	@Override
 	public String compile(Source source, Importer importer) throws LessCSSException {
+		if(compiledScript!=null) {
+			return executeCompiledScript(source, importer);
+		} else {
+			return executeInterpretedScript(source, importer);
+		}
+	}
+
+	protected String executeCompiledScript(Source source, Importer importer) throws LessCSSException {
+		long start, end;
+		final Result result = new Result();
+		final Callback callback = new Callback(source.getFileName());
+
+		Bindings bindings = new SimpleBindings();
+		bindings.put("log", log_js);
+		bindings.put("importer", importer);
+		bindings.put("name", source.getFileName());
+		bindings.put("callback", callback);
+		bindings.put("content", source.getContent());
+		bindings.put("result", result);
+
+		try {
+			start = System.nanoTime();
+			compiledScript.eval(bindings);
+			end = System.nanoTime();
+
+			if (!callback.isComplete()) {
+				log.debug("Waiting for less to finish processing for {}", source.getFileName());
+				//noinspection SynchronizationOnLocalVariableOrMethodParameter
+				synchronized (callback) {
+					callback.wait(15000);
+				}
+			}
+
+			if (!callback.isComplete()) {
+				throw new LessCSSException("Timed out while waiting for compilation to complete for " + source.getFileName());
+			}
+
+			log.info("Processing for {}: {}s", source.getFileName(), String.format("%.3f", (double) (end - start) / 1000000000.0d));
+
+			return result.getResult();
+		} catch (InterruptedException | ScriptException e) {
+			throw new LessCSSException(e.getMessage(), e);
+		}
+
+	}
+
+	protected String executeInterpretedScript(Source source, Importer importer) throws LessCSSException {
 		try {
 			long start, end;
 
 			final Callback callback = new Callback(source.getFileName());
 
-			// log.info("Calling processLess for {}", source.getFileName());
 			start = System.nanoTime();
 			invocable.invokeFunction("processLess",
 					importer,
@@ -95,6 +142,7 @@ public class JavaXScriptCompiler extends Compiler {
 
 			if (!callback.isComplete()) {
 				log.debug("Waiting for less to finish processing for {}", source.getFileName());
+				//noinspection SynchronizationOnLocalVariableOrMethodParameter
 				synchronized (callback) {
 					callback.wait(15000);
 				}
@@ -106,7 +154,6 @@ public class JavaXScriptCompiler extends Compiler {
 
 			end = System.nanoTime();
 			log.info("Processing for {}: {}s", source.getFileName(), String.format("%.3f", (double) (end - start) / 1000000000.0d));
-			start = end;
 
 			return callback.toString();
 
@@ -126,6 +173,7 @@ public class JavaXScriptCompiler extends Compiler {
 			return result;
 		}
 
+		@SuppressWarnings("UnusedDeclaration")
 		public void setResult(String result) {
 			this.result = result;
 		}
@@ -150,6 +198,7 @@ public class JavaXScriptCompiler extends Compiler {
 			callback(err, tree, null);
 		}
 
+		@SuppressWarnings("UnusedParameters")
 		public void callback(Object err, Object tree, String str) {
 			this.err = err;
 			this.tree = tree;

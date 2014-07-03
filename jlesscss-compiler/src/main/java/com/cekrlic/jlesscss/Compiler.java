@@ -17,12 +17,15 @@ package com.cekrlic.jlesscss;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Compiles LESS input into CSS, using less.js on Mozilla Rhino.
  */
 public abstract class Compiler {
+	private static final Logger log = LoggerFactory.getLogger(Compiler.class);
 
 	/**
 	 * Create a new LESS compiler.
@@ -59,9 +62,7 @@ public abstract class Compiler {
 
 
 	public static Compiler getCompiler() throws LessCSSException {
-		/*
 
-		Until we get CompiledScripts to work properly, Rhino beats nashorn
 		ScriptEngineManager factory = new ScriptEngineManager();
 		ScriptEngine engine;
 
@@ -70,15 +71,23 @@ public abstract class Compiler {
 		if(engine != null) {
 			return new JavaXScriptCompiler(engine);
 		}
+		log.info("V8 engine not found. Will try Rhino next.");
+
+		try {
+			Class.forName("org.mozilla.javascript.Context");
+			return new RhinoCompiler();
+		} catch (ClassNotFoundException e) {
+			// ignore
+		}
+
+		log.info("Rhino not found in class path. Will try Nashorn. Please note that tests have shown Nashorn to be slower than Rhino.");
 
 		engine = factory.getEngineByName("nashorn");
 		if(engine != null) {
 			return new JavaXScriptCompiler(engine);
 		}
-		 */
 
-
-		return new RhinoCompiler();
+		throw new LessCSSException("No JavaScript engine found in classpath! Either install Java 8 or include Rhino 1.7.R4 / jav8 in your classpath!");
 	}
 
 	/**
