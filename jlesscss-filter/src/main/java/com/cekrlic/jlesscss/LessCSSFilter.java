@@ -173,14 +173,19 @@ public class LessCSSFilter implements Filter {
 	}
 
 	private String encrypt(String join) {
+		String result;
 		try {
-			return javax.xml.bind.DatatypeConverter.printBase64Binary(join.getBytes("UTF-8"));
+			result = javax.xml.bind.DatatypeConverter.printBase64Binary(join.getBytes("UTF-8"));
 		} catch (UnsupportedEncodingException e) {
-			return javax.xml.bind.DatatypeConverter.printBase64Binary(join.getBytes());
+			result = javax.xml.bind.DatatypeConverter.printBase64Binary(join.getBytes());
 		}
+		// Most browsers will choke if cookie includes an equals sign
+		return result.replace('=', '#');
 	}
 
 	private String decrypt(String value) {
+		// Return the equals since to be able to decypt the content
+		value = value.replace('#', '=');
 		try {
 			return new String(javax.xml.bind.DatatypeConverter.parseBase64Binary(value), "UTF-8");
 		} catch (UnsupportedEncodingException e) {
